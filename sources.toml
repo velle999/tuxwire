@@ -1,0 +1,317 @@
+# Everything the site gathers. Add a feed with a [[feed]] block; the next
+# scheduled build picks it up.
+
+[site]
+name = "Tuxwire"
+tagline = "Linux, tech and emerging tech news, gathered every half hour"
+url = "https://velle999.github.io/tuxwire/"
+repo = "https://github.com/velle999/tuxwire"
+river_days = 4       # how far back the "Latest" list on each page reaches
+keep_days = 10       # how long a story stays in the rolling state (trend baseline)
+river_max = 220      # most stories listed in "Latest" on one page
+
+# A headline matching any of these (case-insensitive) is never listed.
+exclude = [
+  '\bpromo codes?\b', '\bcoupons?\b', '\bdiscount codes?\b',
+  '\b\d+% off\b', '\$\d[\d,]* off\b', '\bsave \$\d', '\blowest price\b',
+  '\ball-time low\b', '\bprime (big deal )?days?\b', '\bblack friday\b',
+  '\bcyber monday\b', '\bdrops \d+% today\b', '\bsuper low price\b',
+  '^(the )?(\d+ )?best .*\(\d{4}\)', '\bdeals? you can (still )?shop\b',
+]
+
+# Headlines from other sections that also belong on the Linux page.
+linux_keywords = [
+  'linux', 'ubuntu', 'fedora', 'debian', 'gnome', 'kde', 'kde plasma',
+  'wayland', 'systemd', 'mesa', 'steamos', 'steam deck', 'proton',
+  'flatpak', 'red hat', 'rhel', 'opensuse', 'torvalds', 'gentoo', 'nixos',
+  'arch linux', 'linux mint', 'libreoffice', 'raspberry pi', 'freebsd',
+]
+
+[sections.linux]
+title = "Linux"
+blurb = "Kernel, distributions, desktops and Linux gaming"
+
+[sections.tech]
+title = "Tech"
+blurb = "The wider industry: hardware, software, security and the companies"
+
+[sections.emerging]
+title = "Emerging"
+blurb = "AI, quantum, space, robotics, energy and research"
+
+# Sidebars, top to bottom. Panels: kernel, distros, hn, lobsters,
+# lobsters_linux, github, hf.
+[pages.front]
+sidebar = ["kernel", "hn", "github", "distros"]
+[pages.linux]
+sidebar = ["kernel", "distros", "lobsters_linux"]
+[pages.tech]
+sidebar = ["hn", "lobsters", "github"]
+[pages.emerging]
+sidebar = ["hf", "github"]
+
+# ---- Linux ---------------------------------------------------------------
+
+[[feed]]
+key = "phoronix"
+name = "Phoronix"
+url = "https://www.phoronix.com/rss.php"
+home = "https://www.phoronix.com/"
+section = "linux"
+
+[[feed]]
+key = "lwn"
+name = "LWN"
+url = "https://lwn.net/headlines/newrss"
+home = "https://lwn.net/"
+section = "linux"
+weight = 1.3
+exclude = ['^Security updates for \w+$', '^LWN\.net Weekly Edition']
+
+[[feed]]
+key = "9to5linux"
+name = "9to5Linux"
+url = "https://9to5linux.com/feed"
+home = "https://9to5linux.com/"
+section = "linux"
+
+[[feed]]
+key = "omgubuntu"
+name = "OMG! Ubuntu"
+url = "https://www.omgubuntu.co.uk/feed"
+home = "https://www.omgubuntu.co.uk/"
+section = "linux"
+
+[[feed]]
+key = "gol"
+name = "GamingOnLinux"
+url = "https://www.gamingonlinux.com/article_rss.php"
+home = "https://www.gamingonlinux.com/"
+section = "linux"
+weight = 0.9
+exclude = ['\bbundle\b', '\bHumble Choice\b']
+
+[[feed]]
+key = "itsfoss"
+name = "It's FOSS"
+url = "https://itsfoss.com/rss/"
+home = "https://itsfoss.com/"
+section = "linux"
+weight = 0.9
+
+[[feed]]
+key = "linuxiac"
+name = "Linuxiac"
+url = "https://linuxiac.com/feed/"
+home = "https://linuxiac.com/"
+section = "linux"
+
+[[feed]]
+key = "archnews"
+name = "Arch Linux"
+url = "https://archlinux.org/feeds/news/"
+home = "https://archlinux.org/news/"
+section = "linux"
+weight = 1.2
+
+[[feed]]
+key = "fedoramag"
+name = "Fedora Magazine"
+url = "https://fedoramagazine.org/feed/"
+home = "https://fedoramagazine.org/"
+section = "linux"
+
+[[feed]]
+key = "kde"
+name = "KDE"
+url = "https://kde.org/index.xml"
+home = "https://kde.org/"
+section = "linux"
+
+[[feed]]
+key = "twig"
+name = "This Week in GNOME"
+url = "https://thisweek.gnome.org/index.xml"
+home = "https://thisweek.gnome.org/"
+section = "linux"
+
+[[feed]]
+key = "linuxmag"
+name = "Linux Magazine"
+url = "https://www.linux-magazine.com/rss/feed/lmi_news"
+home = "https://www.linux-magazine.com/"
+section = "linux"
+weight = 0.8
+
+[[feed]]
+key = "linuxgizmos"
+name = "LinuxGizmos"
+url = "https://linuxgizmos.com/feed/"
+home = "https://linuxgizmos.com/"
+section = "linux"
+weight = 0.8
+
+[[feed]]
+key = "distrowatch"
+name = "DistroWatch"
+url = "https://distrowatch.com/news/dw.xml"
+home = "https://distrowatch.com/"
+section = "linux"
+panel_only = true    # feeds the "Distro releases" panel, not the story list
+
+# ---- Tech ----------------------------------------------------------------
+
+[[feed]]
+key = "ars"
+name = "Ars Technica"
+url = "https://feeds.arstechnica.com/arstechnica/index"
+home = "https://arstechnica.com/"
+section = "tech"
+weight = 1.2
+
+[[feed]]
+key = "verge"
+name = "The Verge"
+url = "https://www.theverge.com/rss/index.xml"
+home = "https://www.theverge.com/"
+section = "tech"
+
+[[feed]]
+key = "techcrunch"
+name = "TechCrunch"
+url = "https://techcrunch.com/feed/"
+home = "https://techcrunch.com/"
+section = "tech"
+
+[[feed]]
+key = "register"
+name = "The Register"
+url = "https://www.theregister.com/headlines.atom"
+home = "https://www.theregister.com/"
+section = "tech"
+
+[[feed]]
+key = "tomshw"
+name = "Tom's Hardware"
+url = "https://www.tomshardware.com/feeds/all"
+home = "https://www.tomshardware.com/"
+section = "tech"
+weight = 0.9
+
+[[feed]]
+key = "wired"
+name = "Wired"
+url = "https://www.wired.com/feed/rss"
+home = "https://www.wired.com/"
+section = "tech"
+
+[[feed]]
+key = "404media"
+name = "404 Media"
+url = "https://www.404media.co/rss/"
+home = "https://www.404media.co/"
+section = "tech"
+
+[[feed]]
+key = "bleeping"
+name = "BleepingComputer"
+url = "https://www.bleepingcomputer.com/feed/"
+home = "https://www.bleepingcomputer.com/"
+section = "tech"
+
+# ---- Emerging ------------------------------------------------------------
+
+[[feed]]
+key = "techreview"
+name = "MIT Technology Review"
+url = "https://www.technologyreview.com/feed/"
+home = "https://www.technologyreview.com/"
+section = "emerging"
+weight = 1.2
+
+[[feed]]
+key = "spectrum"
+name = "IEEE Spectrum"
+url = "https://spectrum.ieee.org/feeds/feed.rss"
+home = "https://spectrum.ieee.org/"
+section = "emerging"
+weight = 1.1
+
+[[feed]]
+key = "arsscience"
+name = "Ars Technica Science"
+url = "https://feeds.arstechnica.com/arstechnica/science"
+home = "https://arstechnica.com/science/"
+section = "emerging"
+
+[[feed]]
+key = "newsci"
+name = "New Scientist"
+url = "https://www.newscientist.com/subject/technology/feed/"
+home = "https://www.newscientist.com/subject/technology/"
+section = "emerging"
+
+[[feed]]
+key = "decoder"
+name = "The Decoder"
+url = "https://the-decoder.com/feed/"
+home = "https://the-decoder.com/"
+section = "emerging"
+
+[[feed]]
+key = "techxplore"
+name = "Tech Xplore"
+url = "https://techxplore.com/rss-feed/"
+home = "https://techxplore.com/"
+section = "emerging"
+weight = 0.8
+
+[[feed]]
+key = "quantum"
+name = "The Quantum Insider"
+url = "https://thequantuminsider.com/feed/"
+home = "https://thequantuminsider.com/"
+section = "emerging"
+
+[[feed]]
+key = "spacenews"
+name = "SpaceNews"
+url = "https://spacenews.com/feed/"
+home = "https://spacenews.com/"
+section = "emerging"
+
+[[feed]]
+key = "robotreport"
+name = "The Robot Report"
+url = "https://www.therobotreport.com/feed/"
+home = "https://www.therobotreport.com/"
+section = "emerging"
+
+[[feed]]
+key = "electrek"
+name = "Electrek"
+url = "https://electrek.co/feed/"
+home = "https://electrek.co/"
+section = "emerging"
+weight = 0.8
+
+[[feed]]
+key = "singularity"
+name = "Singularity Hub"
+url = "https://singularityhub.com/feed/"
+home = "https://singularityhub.com/"
+section = "emerging"
+
+[[feed]]
+key = "quanta"
+name = "Quanta Magazine"
+url = "https://www.quantamagazine.org/feed/"
+home = "https://www.quantamagazine.org/"
+section = "emerging"
+
+[[feed]]
+key = "hfblog"
+name = "Hugging Face"
+url = "https://huggingface.co/blog/feed.xml"
+home = "https://huggingface.co/blog"
+section = "emerging"
