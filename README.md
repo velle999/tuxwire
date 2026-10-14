@@ -1,7 +1,7 @@
 # Tuxwire
 
-Linux, tech and emerging tech news on one page, rebuilt every 30 minutes and
-served free from GitHub Pages.
+Linux, tech, emerging tech and gaming news on one page, rebuilt every 30
+minutes and served free from GitHub Pages.
 
 **Site:** https://velle999.github.io/tuxwire/
 
@@ -13,11 +13,14 @@ served free from GitHub Pages.
 - **Latest**: every headline from the last four days, newest first. Type in the
   box (or press `/`) to filter it.
 - **Side panels**: kernel.org releases, DistroWatch releases, Hacker News,
-  Lobsters, new GitHub repositories gaining stars, and trending Hugging Face
-  models.
+  Lobsters, new GitHub repositories gaining stars, trending Hugging Face
+  models, the most played games on Steam with their Linux and Steam Deck
+  status, the latest Proton, Wine, DXVK and VKD3D-Proton releases, and the
+  Epic Games Store's free games.
 - **Archive**: each finished day's top stories and trends.
 - **Feeds**: Atom feeds of the top stories for every section
-  (`feed.xml`, `feed-linux.xml`, `feed-tech.xml`, `feed-emerging.xml`).
+  (`feed.xml`, `feed-linux.xml`, `feed-tech.xml`, `feed-emerging.xml`,
+  `feed-gaming.xml`).
 
 ## Pages
 
@@ -27,6 +30,12 @@ served free from GitHub Pages.
 | Linux | kernel, distributions, desktops, Linux gaming, plus Linux headlines from the other sections |
 | Tech | hardware, software, security and the industry |
 | Emerging | AI, quantum, space, robotics, energy and research |
+| Gaming | PC and console games, Linux gaming, Steam and the games industry, plus gaming headlines from the other sections |
+
+A headline from another section appears on a page when it contains one of that
+section's `keywords` in [`sources.toml`](sources.toml): a Verge story about the
+Steam Deck is listed under Tech, Linux and Gaming. GamingOnLinux and Boiling
+Steam are Gaming sources whose every headline is also listed on the Linux page.
 
 ## Adding or removing a source
 
@@ -38,10 +47,16 @@ key = "lwn"                              # short unique name
 name = "LWN"                             # shown on the site
 url = "https://lwn.net/headlines/newrss" # the RSS or Atom feed
 home = "https://lwn.net/"                # where the source name links
-section = "linux"                        # linux, tech or emerging
+section = "linux"                        # linux, tech, emerging or gaming
 weight = 1.3                             # optional; the highest-weight outlet leads a grouped story
 exclude = ['^Security updates for']      # optional; headlines to skip
+also = ["gaming"]                        # optional; list every headline on these pages too
 ```
+
+A source listed on a page through `also` appears in that page's Latest list
+and trends. Its stories become that page's top stories only when the headline
+is about the section: the source's own section, or one of the section's
+`keywords`.
 
 Push the change and the site rebuilds within a few minutes. Headlines matching
 the site-wide `exclude` patterns (coupons, deals) are never listed. The

@@ -3,8 +3,10 @@
 import re
 import tomllib
 
-PANELS = {"kernel", "distros", "hn", "lobsters", "lobsters_linux", "github", "hf"}
-PAGES = ("front", "linux", "tech", "emerging")
+PANELS = {"kernel", "distros", "hn", "lobsters", "lobsters_linux", "lobsters_games", "github",
+          "hf", "steam", "compat", "epic"}
+SECTIONS = ("linux", "tech", "emerging", "gaming")
+PAGES = ("front",) + SECTIONS
 
 
 class ConfigError(ValueError):
@@ -27,16 +29,20 @@ def load(path):
     site.setdefault("keep_days", 10)
     site.setdefault("river_max", 220)
     site["exclude_rx"] = _compile(site.get("exclude", []), "[site] exclude")
-    kw = site.get("linux_keywords", [])
-    site["linux_rx"] = re.compile(r"\b(" + "|".join(re.escape(k) for k in kw) + r")\b", re.I) \
-        if kw else None
 
     sections = cfg.get("sections") or {}
-    for key in ("linux", "tech", "emerging"):
+    for key in SECTIONS:
         if key not in sections:
             raise ConfigError(f"[sections.{key}] is missing")
-        sections[key].setdefault("title", key.title())
-        sections[key].setdefault("blurb", "")
+        sec = sections[key]
+        sec.setdefault("title", key.title())
+        sec.setdefault("blurb", "")
+        kw = sec.get("keywords", [])
+        sec["keywords_rx"] = re.compile(r"\b(" + "|".join(re.escape(k) for k in kw) + r")\b", re.I) \
+            if kw else None
+    unknown = set(sections) - set(SECTIONS)
+    if unknown:
+        raise ConfigError(f"unknown sections: {', '.join(sorted(unknown))}")
 
     pages = cfg.get("pages") or {}
     for key in PAGES:
@@ -55,8 +61,10 @@ def load(path):
         if f["key"] in seen:
             raise ConfigError(f"feed key {f['key']} appears twice")
         seen.add(f["key"])
-        if f["section"] not in sections:
-            raise ConfigError(f"feed {f['key']}: unknown section {f['section']}")
+        f.setdefault("also", [])
+        for sec in [f["section"]] + f["also"]:
+            if sec not in SECTIONS:
+                raise ConfigError(f"feed {f['key']}: unknown section {sec}")
         f.setdefault("home", f["url"])
         f.setdefault("weight", 1.0)
         f.setdefault("max_items", 40)

@@ -203,10 +203,19 @@ def panel_lobsters(ua, now, token):
     return _lobsters("https://lobste.rs/hottest.json", ua)
 
 
-def panel_lobsters_linux(ua, now, token):
-    rows = _lobsters("https://lobste.rs/t/linux.json", ua)
+def _lobsters_tag(tag, ua, now):
+    """One tag's stories from the last week, by score."""
+    rows = _lobsters(f"https://lobste.rs/t/{tag}.json", ua)
     week = [r for r in rows if r["ts"] >= now - 7 * 86400] or rows
     return sorted(week, key=lambda r: -r["points"])
+
+
+def panel_lobsters_linux(ua, now, token):
+    return _lobsters_tag("linux", ua, now)
+
+
+def panel_lobsters_games(ua, now, token):
+    return _lobsters_tag("games", ua, now)
 
 
 def panel_github(ua, now, token):
@@ -251,13 +260,127 @@ def panel_hf(ua, now, token):
     return rows
 
 
+def panel_steam(ua, now, token):
+    """Steam's most played games right now, with each one's Linux and Steam Deck status."""
+    d = get_json("https://api.steampowered.com/ISteamChartsService/GetGamesByConcurrentPlayers/v1/", ua)
+    ranks = [r for r in (d.get("response") or {}).get("ranks") or []
+             if isinstance(r.get("appid"), int)][:15]
+    if not ranks:
+        raise ValueError("no games listed")
+    # The chart has only app ids; the store names them, in one request.
+    req = {"ids": [{"appid": r["appid"]} for r in ranks],
+           "context": {"language": "english", "country_code": "US"},
+           "data_request": {"include_basic_info": True, "include_platforms": True}}
+    q = urllib.parse.quote(json.dumps(req, separators=(",", ":")))
+    d = get_json(f"https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json={q}", ua)
+    info = {i.get("appid"): i for i in (d.get("response") or {}).get("store_items") or []}
+    rows = []
+    for r in ranks:
+        it = info.get(r["appid"]) or {}
+        name = " ".join((it.get("name") or "").split())
+        if not name:
+            continue
+        plat = it.get("platforms") or {}
+        rows.append({
+            "name": name,
+            "url": f"https://store.steampowered.com/app/{r['appid']}/",
+            "players": int(r.get("concurrent_in_game") or 0),
+            "peak": int(r.get("peak_in_game") or 0),
+            "linux": bool(plat.get("steamos_linux")),
+            # 0 not yet tested, 1 unsupported, 2 playable, 3 verified
+            "deck": int(plat.get("steam_deck_compat_category") or 0),
+        })
+    if not rows:
+        raise ValueError("no games named")
+    return rows
+
+
+# (shown as, GitHub repository, prefix dropped from the tag)
+COMPAT_GITHUB = (
+    ("Proton", "ValveSoftware/Proton", "proton-"),
+    ("GE-Proton", "GloriousEggroll/proton-ge-custom", "GE-Proton"),
+    ("DXVK", "doitsujin/dxvk", "v"),
+    ("VKD3D-Proton", "HansKristian-Work/vkd3d-proton", "v"),
+)
+
+
+def panel_compat(ua, now, token):
+    """The newest release of Proton, Wine and the layers under them."""
+    headers = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    rows = []
+    for kind, repo, prefix in COMPAT_GITHUB:
+        # Not /releases/latest: Valve does not mark its hotfix releases (11.0-2e) as latest.
+        rels = get_json(f"https://api.github.com/repos/{repo}/releases?per_page=10", ua, headers)
+        r = max((r for r in rels if not r.get("draft") and not r.get("prerelease")
+                 and r.get("published_at")), key=lambda r: r["published_at"])
+        rows.append({"kind": kind, "version": r["tag_name"].removeprefix(prefix),
+                     "date": (r.get("published_at") or "")[:10], "eol": False,
+                     "url": text.safe_url(r.get("html_url")) or f"https://github.com/{repo}/releases"})
+    wine = get_json("https://gitlab.winehq.org/api/v4/projects/wine%2Fwine/releases?per_page=1", ua)[0]
+    rows.insert(2, {"kind": "Wine", "version": wine["tag_name"].removeprefix("wine-"),
+                    "date": (wine.get("released_at") or "")[:10], "eol": False,
+                    "url": text.safe_url((wine.get("_links") or {}).get("self"))
+                    or "https://gitlab.winehq.org/wine/wine/-/releases"})
+    return rows
+
+
+def _iso_ts(s):
+    try:
+        return int(datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp())
+    except (AttributeError, ValueError):
+        return None
+
+
+def panel_epic(ua, now, token):
+    """Games the Epic Games Store gives away: this week's and the next."""
+    return epic_free(get_json("https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions"
+                              "?locale=en-US&country=US&allowCountries=US", ua), now)
+
+
+def epic_free(d, now):
+    games = (((d.get("data") or {}).get("Catalog") or {}).get("searchStore") or {}).get("elements") or []
+    rows, seen = [], set()
+    for g in games:
+        title = " ".join((g.get("title") or "").split())
+        promos = g.get("promotions") or {}
+        for key, current in (("promotionalOffers", True), ("upcomingPromotionalOffers", False)):
+            for group in promos.get(key) or []:
+                for offer in group.get("promotionalOffers") or []:
+                    # The percentage is of the price still paid: 0 is free.
+                    if (offer.get("discountSetting") or {}).get("discountPercentage") != 0:
+                        continue
+                    start, end = _iso_ts(offer.get("startDate")), _iso_ts(offer.get("endDate"))
+                    if not title or not start or not end or end < now or title in seen:
+                        continue
+                    seen.add(title)
+                    rows.append({"title": title, "url": _epic_url(g), "start": start, "end": end,
+                                 "now": current})
+    return sorted(rows, key=lambda r: (not r["now"], r["start"], r["title"]))
+
+
+def _epic_url(game):
+    slugs = [m.get("pageSlug") for m in game.get("offerMappings") or []]
+    slugs += [m.get("pageSlug") for m in (game.get("catalogNs") or {}).get("mappings") or []]
+    slugs.append((game.get("productSlug") or "").removesuffix("/home"))
+    for slug in slugs:
+        if slug and re.fullmatch(r"[\w-]+", slug):
+            return f"https://store.epicgames.com/en-US/p/{slug}"
+    return "https://store.epicgames.com/en-US/free-games"
+
+
 PANEL_FETCHERS = {
     "kernel": panel_kernel,
     "hn": panel_hn,
     "lobsters": panel_lobsters,
     "lobsters_linux": panel_lobsters_linux,
+    "lobsters_games": panel_lobsters_games,
     "github": panel_github,
     "hf": panel_hf,
+    "steam": panel_steam,
+    "compat": panel_compat,
+    "epic": panel_epic,
 }
 
 

@@ -15,6 +15,8 @@
   --tech-bg: #e1ecfa;
   --emerging: #6f42c4;
   --emerging-bg: #ece4fa;
+  --gaming: #b1245c;
+  --gaming-bg: #fbe3ec;
   --spark: #bdb8ab;
   --ok: #1d9a57;
   --bad: #c43a2c;
@@ -41,6 +43,8 @@
     --tech-bg: #12233a;
     --emerging: #bc9cff;
     --emerging-bg: #241a38;
+    --gaming: #ff8cba;
+    --gaming-bg: #341424;
     --spark: #4a5462;
     --ok: #3ddc84;
     --bad: #ff6b5b;
@@ -65,6 +69,8 @@
   --tech-bg: #12233a;
   --emerging: #bc9cff;
   --emerging-bg: #241a38;
+  --gaming: #ff8cba;
+  --gaming-bg: #341424;
   --spark: #4a5462;
   --ok: #3ddc84;
   --bad: #ff6b5b;
@@ -134,6 +140,7 @@ a { color: inherit; }
 .tab.t-linux[aria-current] { border-bottom-color: var(--linux); }
 .tab.t-tech[aria-current] { border-bottom-color: var(--tech); }
 .tab.t-emerging[aria-current] { border-bottom-color: var(--emerging); }
+.tab.t-gaming[aria-current] { border-bottom-color: var(--gaming); }
 
 /* ---- layout ------------------------------------------------------------ */
 
@@ -163,6 +170,7 @@ h2 {
 .src.s-linux { background: var(--linux-bg); color: var(--linux); }
 .src.s-tech { background: var(--tech-bg); color: var(--tech); }
 .src.s-emerging { background: var(--emerging-bg); color: var(--emerging); }
+.src.s-gaming { background: var(--gaming-bg); color: var(--gaming); }
 
 .badge, .disc {
   display: inline-block; padding: 0 6px; border-radius: 4px; white-space: nowrap;
@@ -310,8 +318,10 @@ h2 {
 .pdesc { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-2); line-height: 1.4; }
 .tag {
   margin-left: 6px; padding: 0 4px; border: 1px solid var(--line); border-radius: 3px; font-size: 10.5px;
+  white-space: nowrap;
 }
 .plist .badge { margin-left: 6px; }
+.tag.deck-3 { color: var(--brand); border-color: var(--brand); }
 
 /* ---- footer ------------------------------------------------------------ */
 

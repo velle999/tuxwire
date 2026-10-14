@@ -43,10 +43,15 @@ def merge(state_items, fetched, now, keep_days, feeds):
 def visible(items, cfg):
     """Items that belong in story lists, with their sections attached.
 
+    "about" is what the headline is about: its feed's section and any section
+    whose keywords it mentions. "sec" is every page that lists it: those, plus
+    any the feed is also listed under. A GamingOnLinux headline about a new
+    game is listed on the Linux page, but it is not a Linux top story.
+
     Exclusions are applied here as well as at fetch time, so editing the
     patterns also clears out stories already in the state.
     """
-    site, feeds = cfg["site"], cfg["feeds"]
+    site, feeds, sections = cfg["site"], cfg["feeds"], cfg["sections"]
     out = []
     for it in items:
         feed = feeds.get(it["src"])
@@ -54,16 +59,21 @@ def visible(items, cfg):
             continue
         if any(rx.search(it["title"]) for rx in site["exclude_rx"] + feed["exclude_rx"]):
             continue
-        secs = [feed["section"]]
-        if feed["section"] != "linux" and site["linux_rx"] \
-                and site["linux_rx"].search(it["title"]):
-            secs.append("linux")
-        out.append({**it, "sec": secs})
+        about = [feed["section"]]
+        for key, sec in sections.items():
+            if key not in about and sec["keywords_rx"] and sec["keywords_rx"].search(it["title"]):
+                about.append(key)
+        secs = about + [s for s in feed["also"] if s not in about]
+        out.append({**it, "sec": secs, "about": about})
     return out
 
 
 def in_page(item, page):
     return page == "front" or page in item["sec"]
+
+
+def about_page(item, page):
+    return page == "front" or page in item["about"]
 
 
 # ---- stories --------------------------------------------------------------
@@ -114,7 +124,7 @@ def stories(clusters, page, cfg, now, hn_points, limit, recency=True):
     feeds = cfg["feeds"]
     out = []
     for group in clusters:
-        if not any(in_page(i, page) for i in group):
+        if not any(about_page(i, page) for i in group):
             continue
         newest = max(i["ts"] for i in group)
         if newest < now - TOP_HOURS * HOUR:

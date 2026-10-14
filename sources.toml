@@ -3,7 +3,7 @@
 
 [site]
 name = "Tuxwire"
-tagline = "Linux, tech and emerging tech news, gathered every half hour"
+tagline = "Linux, tech, emerging tech and gaming news, gathered every half hour"
 url = "https://velle999.github.io/tuxwire/"
 repo = "https://github.com/velle999/tuxwire"
 river_days = 4       # how far back the "Latest" list on each page reaches
@@ -17,19 +17,22 @@ exclude = [
   '\ball-time low\b', '\bprime (big deal )?days?\b', '\bblack friday\b',
   '\bcyber monday\b', '\bdrops \d+% today\b', '\bsuper low price\b',
   '^(the )?(\d+ )?best .*\(\d{4}\)', '\bdeals? you can (still )?shop\b',
+  '\bsave (up to )?\d+%', '\$\d[\d,.]* deal\b',
+  '^(get|grab|score|snag|pick up) .*\bfor (just|only|less than|under) \$\d',
 ]
 
-# Headlines from other sections that also belong on the Linux page.
-linux_keywords = [
+# A section's keywords: a headline from any other section that contains one
+# (a whole word or phrase, any case) is listed on that section's page too.
+
+[sections.linux]
+title = "Linux"
+blurb = "Kernel, distributions, desktops and Linux gaming"
+keywords = [
   'linux', 'ubuntu', 'fedora', 'debian', 'gnome', 'kde', 'kde plasma',
   'wayland', 'systemd', 'mesa', 'steamos', 'steam deck', 'proton',
   'flatpak', 'red hat', 'rhel', 'opensuse', 'torvalds', 'gentoo', 'nixos',
   'arch linux', 'linux mint', 'libreoffice', 'raspberry pi', 'freebsd',
 ]
-
-[sections.linux]
-title = "Linux"
-blurb = "Kernel, distributions, desktops and Linux gaming"
 
 [sections.tech]
 title = "Tech"
@@ -39,16 +42,31 @@ blurb = "The wider industry: hardware, software, security and the companies"
 title = "Emerging"
 blurb = "AI, quantum, space, robotics, energy and research"
 
-# Sidebars, top to bottom. Panels: kernel, distros, hn, lobsters,
-# lobsters_linux, github, hf.
+[sections.gaming]
+title = "Gaming"
+blurb = "PC and console games, Linux gaming, Steam and the games industry"
+keywords = [
+  'video game', 'video games', 'gaming', 'gamer', 'gamers', 'esports',
+  'steam deck', 'steam machine', 'steam frame', 'steam controller', 'steamos',
+  'xbox', 'playstation', 'ps5', 'nintendo', 'switch 2', 'game pass',
+  'epic games', 'gog', 'itch.io', 'roblox', 'fortnite', 'minecraft', 'twitch',
+  'unreal engine', 'godot', 'game developer', 'game developers', 'game studio',
+  'game studios',
+]
+
+# Sidebars, top to bottom. Panels: kernel, distros, compat (Proton and Wine
+# releases), hn, lobsters, lobsters_linux, lobsters_games, github, hf,
+# steam (most played on Steam), epic (free on the Epic Games Store).
 [pages.front]
 sidebar = ["kernel", "hn", "github", "distros"]
 [pages.linux]
-sidebar = ["kernel", "distros", "lobsters_linux"]
+sidebar = ["kernel", "distros", "compat", "lobsters_linux"]
 [pages.tech]
 sidebar = ["hn", "lobsters", "github"]
 [pages.emerging]
 sidebar = ["hf", "github"]
+[pages.gaming]
+sidebar = ["steam", "compat", "epic", "lobsters_games"]
 
 # ---- Linux ---------------------------------------------------------------
 
@@ -81,15 +99,6 @@ name = "OMG! Ubuntu"
 url = "https://www.omgubuntu.co.uk/feed"
 home = "https://www.omgubuntu.co.uk/"
 section = "linux"
-
-[[feed]]
-key = "gol"
-name = "GamingOnLinux"
-url = "https://www.gamingonlinux.com/article_rss.php"
-home = "https://www.gamingonlinux.com/"
-section = "linux"
-weight = 0.9
-exclude = ['\bbundle\b', '\bHumble Choice\b']
 
 [[feed]]
 key = "itsfoss"
@@ -315,3 +324,82 @@ name = "Hugging Face"
 url = "https://huggingface.co/blog/feed.xml"
 home = "https://huggingface.co/blog"
 section = "emerging"
+
+# ---- Gaming --------------------------------------------------------------
+
+[[feed]]
+key = "gol"
+name = "GamingOnLinux"
+url = "https://www.gamingonlinux.com/article_rss.php"
+home = "https://www.gamingonlinux.com/"
+section = "gaming"
+also = ["linux"]     # every story is listed on the Linux page as well
+weight = 0.9
+exclude = ['\bbundle\b', '\bHumble Choice\b']
+
+[[feed]]
+key = "boilingsteam"
+name = "Boiling Steam"
+url = "https://boilingsteam.com/feed/"
+home = "https://boilingsteam.com/"
+section = "gaming"
+also = ["linux"]
+weight = 0.9
+
+[[feed]]
+key = "steamnews"
+name = "Steam"
+url = "https://store.steampowered.com/feeds/news/app/593110/?cc=US&l=english"
+home = "https://store.steampowered.com/news/app/593110"
+section = "gaming"
+weight = 1.2
+
+[[feed]]
+key = "rps"
+name = "Rock Paper Shotgun"
+url = "https://www.rockpapershotgun.com/feed"
+home = "https://www.rockpapershotgun.com/"
+section = "gaming"
+weight = 1.1
+exclude = ['^The Sunday Papers$']
+
+[[feed]]
+key = "pcgamer"
+name = "PC Gamer"
+url = "https://www.pcgamer.com/rss/"
+home = "https://www.pcgamer.com/"
+section = "gaming"
+weight = 0.9
+exclude = ['^How to ', '^Can you\b.*\?$', '^Where to (find|get)\b', '\bwalkthrough\b',
+           '\bwordle\b', '\bhints? and answers?\b', '\btier list\b']
+
+[[feed]]
+key = "eurogamer"
+name = "Eurogamer"
+url = "https://www.eurogamer.net/feed"
+home = "https://www.eurogamer.net/"
+section = "gaming"
+
+[[feed]]
+key = "vgc"
+name = "VGC"
+url = "https://www.videogameschronicle.com/feed/"
+home = "https://www.videogameschronicle.com/"
+section = "gaming"
+exclude = ['^How to ', ': How to ', '\bwalkthrough\b']
+
+[[feed]]
+key = "gibiz"
+name = "GamesIndustry.biz"
+url = "https://www.gamesindustry.biz/feed"
+home = "https://www.gamesindustry.biz/"
+section = "gaming"
+weight = 1.1
+
+[[feed]]
+key = "aftermath"
+name = "Aftermath"
+url = "https://aftermath.site/feed"
+home = "https://aftermath.site/"
+section = "gaming"
+weight = 0.9

@@ -6,11 +6,10 @@ import time
 from urllib.parse import urlsplit
 
 from . import text
+from .config import PAGES, SECTIONS
 
-PAGE_FILES = {"front": "index.html", "linux": "linux.html", "tech": "tech.html",
-              "emerging": "emerging.html"}
-FEED_FILES = {"front": "feed.xml", "linux": "feed-linux.xml", "tech": "feed-tech.xml",
-              "emerging": "feed-emerging.xml"}
+PAGE_FILES = {"front": "index.html", **{s: f"{s}.html" for s in SECTIONS}}
+FEED_FILES = {"front": "feed.xml", **{s: f"feed-{s}.xml" for s in SECTIONS}}
 
 PANEL_TITLES = {
     "kernel": ("Kernel releases", "kernel.org", "https://www.kernel.org/"),
@@ -18,11 +17,19 @@ PANEL_TITLES = {
     "hn": ("Hacker News", "news.ycombinator.com", "https://news.ycombinator.com/"),
     "lobsters": ("Lobsters", "lobste.rs", "https://lobste.rs/"),
     "lobsters_linux": ("Lobsters · linux", "lobste.rs/t/linux", "https://lobste.rs/t/linux"),
+    "lobsters_games": ("Lobsters · games", "lobste.rs/t/games", "https://lobste.rs/t/games"),
     "github": ("Rising on GitHub", "New repositories this week, by stars",
                "https://github.com/trending"),
     "hf": ("Trending on Hugging Face", "huggingface.co/models",
            "https://huggingface.co/models?sort=trending"),
+    "steam": ("Most played on Steam", "Players in game right now",
+              "https://store.steampowered.com/charts/mostplayed"),
+    "compat": ("Proton and Wine", "Latest releases", "https://github.com/ValveSoftware/Proton/releases"),
+    "epic": ("Free on Epic", "Free to keep from the Epic Games Store",
+             "https://store.epicgames.com/en-US/free-games"),
 }
+
+DECK = {1: "Unsupported", 2: "Playable", 3: "Verified"}
 
 
 def esc(s):
@@ -116,10 +123,9 @@ class Renderer:
     def masthead(self, page, root, built):
         s = self.site
         tabs = []
-        for key, label in (("front", "Front page"), ("linux", self.cfg["sections"]["linux"]["title"]),
-                           ("tech", self.cfg["sections"]["tech"]["title"]),
-                           ("emerging", self.cfg["sections"]["emerging"]["title"]),
-                           ("archive", "Archive")):
+        for key in PAGES + ("archive",):
+            label = {"front": "Front page", "archive": "Archive"}.get(key) \
+                or self.cfg["sections"][key]["title"]
             href = f"{root}archive/" if key == "archive" else f"{root}{PAGE_FILES[key]}"
             cur = ' aria-current="page"' if key == page else ""
             tabs.append(f'<a class="tab t-{key}" href="{href}"{cur}>{esc(label)}</a>')
@@ -139,7 +145,7 @@ class Renderer:
 
     def footer(self, root, status, counts, built):
         groups = []
-        for sec in ("linux", "tech", "emerging"):
+        for sec in SECTIONS:
             rows = []
             for key, f in self.feeds.items():
                 if f["section"] != sec:
@@ -297,6 +303,9 @@ class Renderer:
     def panel_lobsters_linux(self, rows):
         return self._discussed(rows, 10)
 
+    def panel_lobsters_games(self, rows):
+        return self._discussed(rows, 10)
+
     def panel_github(self, rows):
         out = []
         for r in rows[:10]:
@@ -315,6 +324,33 @@ class Renderer:
             out.append(f'<li><a class="pt" href="{esc(r["url"])}">{esc(owner)}/<b>{esc(model)}</b></a>'
                        f'<span class="pmeta">{task}♥ {compact(r["likes"])} · '
                        f'↓ {compact(r["downloads"])}</span></li>')
+        return f'<ol class="plist">{"".join(out)}</ol>'
+
+    def panel_steam(self, rows):
+        out = []
+        for r in rows[:10]:
+            tags = ""
+            if r["linux"]:
+                tags += '<span class="tag" title="Has a native Linux version">Linux</span>'
+            if r["deck"] in DECK:
+                tags += (f'<span class="tag deck-{r["deck"]}" title="Steam Deck compatibility">'
+                         f'Deck {DECK[r["deck"]]}</span>')
+            out.append(f'<li><a class="pt" href="{esc(r["url"])}">{esc(r["name"])}</a>'
+                       f'<span class="pmeta">{compact(r["players"])} now · '
+                       f'{compact(r["peak"])} peak today{tags}</span></li>')
+        return f'<ol class="plist">{"".join(out)}</ol>'
+
+    def panel_compat(self, rows):
+        return self.panel_kernel(rows)
+
+    def panel_epic(self, rows):
+        out = []
+        for r in rows[:8]:
+            day = time.strftime("%b %d", time.gmtime(r["end"] if r["now"] else r["start"]))
+            when = f"Free until {day}" if r["now"] else f"Free from {day}"
+            nxt = "" if r["now"] else ' <span class="badge">next</span>'
+            out.append(f'<li><a class="pt" href="{esc(r["url"])}">{esc(r["title"])}</a>{nxt}'
+                       f'<span class="pmeta">{when}</span></li>')
         return f'<ol class="plist">{"".join(out)}</ol>'
 
     def panel_distros(self, rows):
@@ -397,7 +433,7 @@ class Renderer:
         s = self.site
         root = "../"
         sections = []
-        for page in ("front", "linux", "tech", "emerging"):
+        for page in PAGES:
             p = snap["pages"].get(page)
             if not p or not p["top"]:
                 continue

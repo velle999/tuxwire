@@ -99,6 +99,30 @@ class FeedTests(unittest.TestCase):
         ts = [i["ts"] for i in self.parse()]
         self.assertEqual(ts, sorted(ts, reverse=True))
 
+    def test_epic_free(self):
+        def game(title, slug, current=(), upcoming=()):
+            offers = lambda os: [{"promotionalOffers": [
+                {"startDate": a, "endDate": b, "discountSetting": {"discountPercentage": pct}}
+                for a, b, pct in os]}] if os else []
+            return {"title": title, "offerMappings": [{"pageSlug": slug}],
+                    "promotions": {"promotionalOffers": offers(current),
+                                   "upcomingPromotionalOffers": offers(upcoming)}}
+        day = lambda n: time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(NOW + n * 86400))
+        data = {"data": {"Catalog": {"searchStore": {"elements": [
+            game("Next Week", "next-week", upcoming=[(day(2), day(9), 0)]),
+            game("Free Now", "free-now", current=[(day(-5), day(2), 0)]),
+            game("Half Price", "half-price", current=[(day(-5), day(2), 50)]),
+            game("Already Over", "over", current=[(day(-9), day(-2), 0)]),
+            game("Odd Slug", "x/../y", current=[(day(-1), day(6), 0)]),
+            {"title": "No Promotions", "promotions": None},
+        ]}}}}
+        rows = fetch.epic_free(data, NOW)
+        self.assertEqual([(r["title"], r["now"]) for r in rows],
+                         [("Free Now", True), ("Odd Slug", True), ("Next Week", False)])
+        self.assertEqual(rows[0]["url"], "https://store.epicgames.com/en-US/p/free-now")
+        self.assertEqual(rows[1]["url"], "https://store.epicgames.com/en-US/free-games")
+        self.assertEqual(fetch.epic_free({"data": None}, NOW), [])
+
     def test_distro_rows(self):
         rows = fetch.distro_releases([
             item("distrowatch", "Distribution Release: Fedora 43", 2),
@@ -138,6 +162,38 @@ class AnalyzeTests(unittest.TestCase):
     def test_cross_tag_linux(self):
         vis = analyze.visible([item("verge", "Valve ships a new Linux handheld")], CFG)
         self.assertEqual(vis[0]["sec"], ["tech", "linux"])
+
+    def test_sections_by_keyword_and_feed(self):
+        vis = analyze.visible([
+            item("verge", "Nintendo raises the price of the Switch 2"),
+            item("verge", "The Steam Deck 2 runs SteamOS 4"),
+            item("electrek", "Electric trucks are running out of steam"),
+            item("gol", "A roguelite about brewing is out now"),
+            item("pcgamer", "How to beat the final boss in Valor Mortis"),
+        ], CFG)
+        self.assertEqual([i["sec"] for i in vis],
+                         [["tech", "gaming"], ["tech", "linux", "gaming"], ["emerging"],
+                          ["gaming", "linux"]])           # the guide is excluded
+        self.assertTrue(analyze.in_page(vis[3], "linux"))
+
+    def test_listed_by_feed_is_not_a_top_story(self):
+        corpus = self.corpus() + [
+            item("gol", "Squadron 42 gets a Steam page with a Q2 2027 release date", 3),
+            item("rps", "Squadron 42 gets a Steam page ahead of its Q2 2027 launch", 2),
+            item("eurogamer", "Squadron 42 opens Steam wishlisting ahead of Q2 2027 release", 1),
+            item("gol", "Proton Experimental fixes Wildgate prefix corruption", 2),
+            item("rps", "Wildgate prefix corruption on Proton fixed by Valve", 1),
+        ]
+        vis = analyze.visible(corpus, CFG)
+        idf, unknown = analyze.idf_table(vis)
+        groups = analyze.cluster(vis, idf, unknown)
+        heads = lambda page: {s["sources"]: s["lead"]["title"]
+                              for s in analyze.stories(groups, page, CFG, NOW, {}, 10)
+                              if "Squadron" in s["lead"]["title"] or "Proton" in s["lead"]["title"]}
+        self.assertEqual(sorted(heads("gaming")), [2, 3])
+        self.assertEqual(list(heads("linux")), [2])          # only the Proton story is about Linux
+        river = analyze.river(vis, "linux", NOW, 4, 500)
+        self.assertEqual(sum("Squadron" in i["title"] for i in river), 1)   # GOL's is still listed
 
     def test_cluster_and_stories(self):
         vis = analyze.visible(self.corpus(), CFG)
@@ -188,6 +244,36 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(page.count("</script>"), 3)   # theme init, trend ids, app.js
 
 
+    def test_gaming_panels(self):
+        r = render.Renderer(CFG, "test")
+        panels = {
+            "steam": {"rows": [
+                {"name": "<b>Native</b>", "url": "https://store.steampowered.com/app/1/",
+                 "players": 415241, "peak": 1196213, "linux": True, "deck": 2},
+                {"name": "Verified Game", "url": "https://store.steampowered.com/app/2/",
+                 "players": 900, "peak": 1200, "linux": False, "deck": 3}]},
+            "compat": {"rows": [{"kind": "Proton", "version": "11.0-2e", "date": "2026-10-09",
+                                 "eol": False, "url": "https://github.com/ValveSoftware/Proton"}]},
+            "epic": {"rows": [{"title": "Free Now", "url": "https://store.epicgames.com/en-US/p/a",
+                               "start": NOW - 86400, "end": NOW + 86400, "now": True},
+                              {"title": "Next Week", "url": "https://store.epicgames.com/en-US/p/b",
+                               "start": NOW + 2 * 86400, "end": NOW + 9 * 86400, "now": False}]},
+        }
+        model = {"top": [], "trends": [], "river": [], "panels": panels, "disc": {}, "status": {},
+                 "counts": {}, "built": NOW}
+        page = r.page("gaming", model)
+        self.assertIn('aria-current="page">Gaming</a>', page)
+        self.assertIn("&lt;b&gt;Native&lt;/b&gt;", page)
+        self.assertIn("415k now · 1.2M peak today", page)
+        self.assertIn(">Linux</span>", page)
+        self.assertIn("Deck Playable", page)
+        self.assertIn('class="tag deck-3"', page)
+        self.assertIn(">11.0-2e</a>", page)
+        self.assertIn("Free until", page)
+        self.assertIn('Next Week</a> <span class="badge">next</span>', page)
+        self.assertIn("Not available right now.", page)            # Lobsters, no rows yet
+
+
 class BuildTests(unittest.TestCase):
     def test_offline_build_from_saved_state(self):
         corpus = AnalyzeTests().corpus()
@@ -200,17 +286,19 @@ class BuildTests(unittest.TestCase):
             subprocess.run([sys.executable, str(ROOT / "build.py"), "--offline", "--out", str(out),
                             "--archive", str(Path(tmp) / "archive"), "--now", str(NOW)],
                            check=True, capture_output=True)
-            for f in ("index.html", "linux.html", "tech.html", "emerging.html", "feed.xml",
-                      "archive/index.html", "static/style.css", "build.json", "state.json"):
+            for f in ("index.html", "linux.html", "tech.html", "emerging.html", "gaming.html",
+                      "feed.xml", "feed-gaming.xml", "archive/index.html", "static/style.css",
+                      "build.json", "state.json"):
                 self.assertTrue((out / f).exists(), f)
             self.assertIn("Python 3.15", (out / "index.html").read_text())
             days = sorted(p.name for p in (Path(tmp) / "archive").glob("*.json"))
             self.assertEqual(len(days), 4)            # four whole days watched
             snap = json.loads((Path(tmp) / "archive" / days[-1]).read_text())
-            self.assertIn("front", snap["pages"])
+            self.assertEqual(set(snap["pages"]), set(config.PAGES))
             self.assertTrue((out / "archive" / days[-1].replace(".json", ".html")).exists())
             import xml.dom.minidom
-            xml.dom.minidom.parse(str(out / "feed.xml"))
+            for f in ("feed.xml", "feed-gaming.xml"):
+                xml.dom.minidom.parse(str(out / f))
 
 
 if __name__ == "__main__":

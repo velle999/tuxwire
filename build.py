@@ -20,9 +20,9 @@ STATE_FILE = "state.json"
 STATE_VERSION = 1
 DAY = analyze.DAY
 HOUR = analyze.HOUR
-PAGES = ("front", "linux", "tech", "emerging")
-TOP_LIMIT = {"front": 8, "linux": 7, "tech": 7, "emerging": 7}
-TREND_LIMIT = {"front": 14, "linux": 10, "tech": 10, "emerging": 10}
+PAGES = config.PAGES
+TOP_LIMIT = {"front": 8, **{s: 7 for s in config.SECTIONS}}
+TREND_LIMIT = {"front": 14, **{s: 10 for s in config.SECTIONS}}
 
 
 def empty_state(now):
@@ -190,7 +190,8 @@ def main():
     clusters = analyze.cluster(recent, idf, unknown)
     disc = analyze.discussions(("Hacker News", (pstate.get("hn") or {}).get("rows")),
                                ("Lobsters", (pstate.get("lobsters") or {}).get("rows")),
-                               ("Lobsters", (pstate.get("lobsters_linux") or {}).get("rows")))
+                               ("Lobsters", (pstate.get("lobsters_linux") or {}).get("rows")),
+                               ("Lobsters", (pstate.get("lobsters_games") or {}).get("rows")))
     hn_points = {k: v[0] for k, v in disc.items() if v[3] == "Hacker News"}
     window = now - site["river_days"] * DAY
     counts = Counter(i["src"] for i in vis if i["ts"] >= window)
